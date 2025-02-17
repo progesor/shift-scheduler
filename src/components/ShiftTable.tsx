@@ -44,9 +44,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks, employeeCount }) => {
             {schedule.map((weekPlan, weekIndex) => {
                 const summary = generateDailySummary(weekPlan);
                 return (
-                    // Her hafta bloğu artık Collapsible bileşeni içinde yer alıyor.
                     <Collapsible key={weekIndex} title={`Hafta ${weekIndex + 1} - Vardiya Çizelgesi`}>
-                        {/* Haftalık vardiya özet bilgilerini gösteren kart */}
                         <div className="mb-4 bg-gray-100 p-2 rounded text-xs text-gray-700">
                             <div className="font-semibold mb-1">Vardiya Özeti</div>
                             <div className="flex flex-wrap gap-2">
@@ -87,13 +85,12 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks, employeeCount }) => {
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
                             {Object.keys(weekPlan['Pzt']).map((empName) => {
-                                // Toplam saat sütunu: örnekte sabit 180:00
-                                const totalShiftHours = 180;
+                                const totalShiftHours = 180; // Sabit örnek
                                 return (
                                     <tr key={empName} className="hover:bg-gray-50">
                                         <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
                                             {empName}
-                                            <div className="text-xs text-gray-500">20 gün çalışma</div>
+                                            <div className="text-xs text-gray-500">Örnek çalışma</div>
                                         </td>
                                         {days.map((day) => {
                                             const assignedShiftId = weekPlan[day][empName];

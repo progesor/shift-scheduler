@@ -4,7 +4,8 @@
 export const days = ['Pzt', 'Sal', 'Çar', 'Perş', 'Cum', 'Cmt', 'Paz'];
 
 // Vardiya detayları (6 çalışma vardiyası + İzin)
-// Çalışma vardiyaları için gereken minimum kişi: 3, İzin için 0.
+// Gereken minimum kişi sayıları:
+//   G, A1, A2, D: 3 kişi, S1, S2: 2 kişi; İzin için 0.
 export interface Shift {
     id: string;
     name: string;
@@ -14,8 +15,8 @@ export interface Shift {
 
 export const shiftDetails: Shift[] = [
     { id: 'G', name: 'Gece', time: '00:00 - 09:00', required: 3 },
-    { id: 'S1', name: 'Sabah', time: '09:00 - 18:00', required: 3 },
-    { id: 'S2', name: 'Sabah2', time: '10:00 - 19:00', required: 3 },
+    { id: 'S1', name: 'Sabah', time: '09:00 - 18:00', required: 2 },
+    { id: 'S2', name: 'Sabah2', time: '10:00 - 19:00', required: 2 },
     { id: 'A1', name: 'Akşam1', time: '15:00 - 00:00', required: 3 },
     { id: 'A2', name: 'Akşam2', time: '15:00 - 00:00', required: 3 },
     { id: 'D', name: 'Davul', time: '19:00 - 04:00', required: 3 },
@@ -25,7 +26,7 @@ export const shiftDetails: Shift[] = [
 // Çalışan verileri arayüzü
 export interface Employee {
     name: string;
-    baseOff: number; // 0-6 arası; çalışanın başlangıç izin ofseti
+    baseOff: number; // Bu örnekte izin günleri, çalışanların ait olduğu izin grubunun offDays'uyla belirlenecek.
 }
 
 // Belirtilen çalışan sayısına göre çalışan listesini oluşturur.
@@ -37,95 +38,122 @@ export const generateEmployees = (employeeCount: number): Employee[] => {
     return emps;
 };
 
-// İzin grubu arayüzü
+/**
+ * generatePermissionGroups:
+ * Çalışan listesini 7 gruba böler ve her gruba sabit 2 off günü atar.
+ * Off günleri örnekte şu şekilde belirlenmiştir:
+ *   Grup A: [0, 1] → Pazartesi, Salı
+ *   Grup B: [1, 2] → Salı, Çarşamba
+ *   Grup C: [2, 3] → Çarşamba, Perşembe
+ *   Grup D: [3, 4] → Perşembe, Cuma
+ *   Grup E: [4, 5] → Cuma, Cumartesi
+ *   Grup F: [5, 6] → Cumartesi, Pazar
+ *   Grup G: [6, 0] → Pazar, Pazartesi
+ */
 export interface PermissionGroup {
     group: string;
     employees: Employee[];
-    offDays: number[]; // gün indexleri (0: Pzt, …, 6: Paz)
+    offDays: number[];
 }
 
-// Çalışan listesini 7 eşit (gerektiğinde kalanlarla) gruba böler.
-// Örneğin: Grup A: Pazartesi & Salı, Grup B: Salı & Çarş, …, Grup G: Pazar & Pazartesi
 export const generatePermissionGroups = (emps: Employee[]): PermissionGroup[] => {
     const groups: PermissionGroup[] = [];
+    const groupSize = Math.ceil(emps.length / 7);
     const groupNames = ['A', 'B', 'C', 'D', 'E', 'F', 'G'];
-    const n = emps.length;
-    const baseSize = Math.floor(n / 7);
-    const remainder = n % 7;
-    let start = 0;
+    const offDaysList: number[][] = [
+        [0, 1],
+        [1, 2],
+        [2, 3],
+        [3, 4],
+        [4, 5],
+        [5, 6],
+        [6, 0],
+    ];
     for (let i = 0; i < 7; i++) {
-        const groupSize = baseSize + (i < remainder ? 1 : 0);
-        const groupEmployees = emps.slice(start, start + groupSize);
-        start += groupSize;
-        let offDays: number[] = [];
-        if (i === 0) offDays = [0, 1];
-        else if (i === 1) offDays = [1, 2];
-        else if (i === 2) offDays = [2, 3];
-        else if (i === 3) offDays = [3, 4];
-        else if (i === 4) offDays = [4, 5];
-        else if (i === 5) offDays = [5, 6];
-        else if (i === 6) offDays = [6, 0];
-        groups.push({ group: groupNames[i], employees: groupEmployees, offDays });
+        const groupEmployees = emps.slice(i * groupSize, (i + 1) * groupSize);
+        groups.push({
+            group: groupNames[i],
+            employees: groupEmployees,
+            offDays: offDaysList[i],
+        });
     }
     return groups;
 };
 
 /**
  * generateSchedule:
- * Belirtilen hafta sayısı ve çalışan sayısına göre her hafta için,
- * her gün her çalışanın atanmış vardiya kodlarını hesaplar.
+ * Belirtilen hafta sayısı ve çalışan sayısına göre, her hafta için
+ * her gün çalışanların atanmış vardiya kodlarını hesaplar.
  *
- * Her çalışan için o haftanın izin günleri:
- *    offDay1 = (emp.baseOff + week - 1) mod 7
- *    offDay2 = (emp.baseOff + week) mod 7
+ * Kurallar:
+ *  - Her çalışan haftada 7 gün içinde 5 gün çalışıp 2 gün izin yapar.
+ *  - İzin günleri, her çalışanın ait olduğu izin grubunun offDays değerlerine göre belirlenir.
+ *  - Çalışma günlerinde, her çalışanın "tercih edilen" vardiyası,
+ *    ilk hafta global olarak (isim sırasına göre) round‑robin yöntemiyle atanır.
+ *  - Sonraki haftalarda, vardiya, (initialShiftIndex + (week - 1)) mod 6 şeklinde
+ *    rotasyonla belirlenir.
  *
- * Eğer günün indexi (0–6) bu değerlerden biri ise, o gün çalışan "İzin" (X) alır.
- * Aksi halde, o gün çalışma günündeki çalışanlar global olarak (isim sırasına göre)
- * sıralanır ve round‑robin yöntemiyle "X" hariç 6 vardiyadan (G, S1, S2, A1, A2, D)
- * yalnızca 1 vardiyaya atanır.
+ * Bu yöntemle, her çalışan haftada 5 gün çalışır (toplam 260 gün / 52 hafta) ve her vardiya,
+ * ideal olarak 260/6 ≈ 43-44 gün çalışmayı sağlayacaktır.
+ *
+ * Önemli: Çalışanların sıralaması, isimdeki sayısal değeri esas alacak şekilde yapılmalıdır.
  *
  * @param weeks - Oluşturulacak hafta sayısı
  * @param employeeCount - Kullanıcı tarafından girilen çalışan sayısı
- * @returns schedule: Her hafta için, { day: { employeeName: shiftId } } nesnesi.
+ * @returns schedule: Her hafta için { day: { employeeName: shiftId } } nesnesi.
  */
 export const generateSchedule = (
     weeks: number,
     employeeCount: number
 ): Array<Record<string, Record<string, string>>> => {
     const emps = generateEmployees(employeeCount);
-    const permissionGroups = generatePermissionGroups(emps);
-    const availableShifts = shiftDetails.filter((shift) => shift.id !== 'X'); // 6 vardiya
-    const availableShiftsCount = availableShifts.length;
+    // Çalışanları, isimdeki sayısal değere göre sıralayalım:
+    const sortedEmps = emps.slice().sort((a, b) => {
+        const numA = parseInt(a.name.replace(/\D/g, ''), 10);
+        const numB = parseInt(b.name.replace(/\D/g, ''), 10);
+        return numA - numB;
+    });
+
+    // Her çalışan için başlangıç vardiya indeksi: sortedEmps sırasındaki index mod 6
+    const week1Assignments: Record<string, number> = {};
+    sortedEmps.forEach((emp, i) => {
+        week1Assignments[emp.name] = i % 6; // 0: G, 1: S1, ..., 5: D
+    });
 
     // schedule[week][day][employee.name] = shift id
     const schedule: Array<Record<string, Record<string, string>>> = [];
 
     for (let week = 1; week <= weeks; week++) {
         const weekPlan: Record<string, Record<string, string>> = {};
+
         days.forEach((day, dayIndex) => {
             const daySchedule: Record<string, string> = {};
-            // Önce, her çalışan için izin durumunu belirleyelim.
-            emps.forEach((emp) => {
-                const offDay1 = (emp.baseOff + week - 1) % 7;
-                const offDay2 = (emp.baseOff + week) % 7;
-                if (dayIndex === offDay1 || dayIndex === offDay2) {
+
+            // İzin günleri: Her çalışanın ait olduğu izin grubunun offDays değerine göre atanır.
+            sortedEmps.forEach(emp => {
+                const group = generatePermissionGroups(emps).find(g =>
+                    g.employees.some(e => e.name === emp.name)
+                );
+                if (group && group.offDays.includes(dayIndex)) {
                     daySchedule[emp.name] = 'X';
                 }
             });
-            // Çalışma günlerinde (izinli olmayanlar): global olarak isim sırasına göre atama yapalım.
-            const workingEmployees = emps.filter((emp) => !daySchedule[emp.name]);
-            const sortedWorking = workingEmployees.slice().sort((a, b) =>
-                a.name.localeCompare(b.name)
-            );
-            sortedWorking.forEach((emp, i) => {
-                const shift = availableShifts[(i + (week - 1)) % availableShiftsCount];
-                daySchedule[emp.name] = shift.id;
+
+            // Çalışma gününde (izin olmayanlar):
+            const workingEmps = sortedEmps.filter(emp => daySchedule[emp.name] !== 'X');
+            // Her çalışanın tercih edilen vardiyası:
+            workingEmps.forEach(emp => {
+                const initIndex = week1Assignments[emp.name]; // 0-5
+                const shiftIndex = (initIndex + (week - 1)) % 6; // Haftalık rotasyon
+                // Atanacak vardiya:
+                daySchedule[emp.name] = shiftDetails.filter(s => s.id !== 'X')[shiftIndex].id;
             });
+
             weekPlan[day] = daySchedule;
         });
+
         schedule.push(weekPlan);
     }
 
     return schedule;
 };
-

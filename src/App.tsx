@@ -27,10 +27,7 @@ const App: React.FC = () => {
                     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                         <WeekSelector weeks={weeks} setWeeks={setWeeks} />
                         <div>
-                            <label
-                                htmlFor="employeeCount"
-                                className="block text-sm font-medium text-gray-700"
-                            >
+                            <label htmlFor="employeeCount" className="block text-sm font-medium text-gray-700">
                                 Çalışan Sayısı
                             </label>
                             <input

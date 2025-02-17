@@ -15,7 +15,7 @@ const ShiftStatistics: React.FC<ShiftStatisticsProps> = ({ schedule, weeks }) =>
     // Her çalışan için istatistikleri tutan obje
     const employeeStats: Record<string, EmployeeStats> = {};
 
-    // Tüm çalışan isimlerini schedule[0] günlerinden dinamik olarak elde edelim.
+    // Çalışan isimlerini schedule[0] (ilk hafta, Pazartesi) üzerinden elde ediyoruz.
     const employeeNames = Object.keys(schedule[0]['Pzt']);
 
     employeeNames.forEach(name => {
@@ -25,7 +25,7 @@ const ShiftStatistics: React.FC<ShiftStatisticsProps> = ({ schedule, weeks }) =>
         });
     });
 
-    // Tüm haftaların schedule'ını gezerek, her çalışanın vardiya sayısını toplayalım.
+    // Tüm haftaların schedule'ını gezerek, her çalışan için vardiya sayısını toplayalım.
     schedule.forEach(weekPlan => {
         Object.values(weekPlan).forEach(daySchedule => {
             Object.entries(daySchedule).forEach(([empName, shiftId]) => {
