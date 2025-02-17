@@ -1,0 +1,8 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Ekstra özel stil tanımlamaları (varsa) */
+body {
+    background: #f3f4f6; /* Açık gri arka plan */
+}
