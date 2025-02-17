@@ -12,7 +12,7 @@ const shiftColorClasses: Record<string, string> = {
     S1: 'bg-blue-200 hover:bg-blue-300',
     S2: 'bg-green-200 hover:bg-green-300',
     A1: 'bg-yellow-200 hover:bg-yellow-300',
-    A2: 'bg-orange-200 hover:bg-orange-300', // A2 için
+    A2: 'bg-orange-200 hover:bg-orange-300',
     D: 'bg-red-200 hover:bg-red-300',
     X: 'bg-gray-200 hover:bg-gray-300',
 };
@@ -49,7 +49,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks }) => {
                         <h2 className="text-xl font-semibold text-gray-900 mb-3">
                             Hafta {weekIndex + 1}
                         </h2>
-                        {/* Haftalık Vardiya Özeti Kartı */}
+                        {/* Haftalık vardiya özet bilgilerini gösteren kart */}
                         <div className="mb-4 bg-gray-100 p-2 rounded text-xs text-gray-700">
                             <div className="font-semibold mb-1">Vardiya Özeti</div>
                             <div className="flex flex-wrap gap-2">
@@ -90,7 +90,7 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks }) => {
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
                             {employees.map((emp) => {
-                                // Toplam saat sütunu: örneğimizde sabit 180:00 gösteriliyor.
+                                // Toplam saat sütunu: Örnekte sabit 180:00
                                 const totalShiftHours = 180;
                                 return (
                                     <tr key={emp.name} className="hover:bg-gray-50">

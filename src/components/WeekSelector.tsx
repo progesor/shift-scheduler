@@ -7,7 +7,7 @@ interface WeekSelectorProps {
 }
 
 const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, setWeeks }) => {
-    const options = [1,4, 8, 12, 16];
+    const options = [1,4,6, 8, 12, 16,24,48,52,60,72];
 
     return (
         <div className="mt-4">
