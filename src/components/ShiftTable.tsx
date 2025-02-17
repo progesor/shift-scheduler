@@ -4,6 +4,7 @@ import { generateSchedule, days, shiftDetails, employees } from '../utils/shiftS
 
 interface ShiftTableProps {
     weeks: number;
+    employeeCount: number;
 }
 
 // Vardiya hücrelerinin arka plan renkleri – A2 için turuncu
@@ -34,8 +35,9 @@ const generateDailySummary = (weekPlan: Record<string, Record<string, string>>) 
     return summary;
 };
 
-const ShiftTable: React.FC<ShiftTableProps> = ({ weeks }) => {
-    const schedule = generateSchedule(weeks);
+const ShiftTable: React.FC<ShiftTableProps> = ({ weeks, employeeCount }) => {
+    // schedule artık employeeCount parametresiyle hesaplanıyor.
+    const schedule = generateSchedule(weeks, employeeCount);
 
     return (
         <div className="overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8">
@@ -89,37 +91,41 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks }) => {
                             </tr>
                             </thead>
                             <tbody className="divide-y divide-gray-200 bg-white">
-                            {employees.map((emp) => {
-                                // Toplam saat sütunu: Örnekte sabit 180:00
-                                const totalShiftHours = 180;
-                                return (
-                                    <tr key={emp.name} className="hover:bg-gray-50">
-                                        <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
-                                            {emp.name}
-                                            <div className="text-xs text-gray-500">20 gün çalışma</div>
-                                        </td>
-                                        {days.map((day) => {
-                                            const assignedShiftId = schedule[weekIndex][day][emp.name];
-                                            const shiftInfo = shiftDetails.find(s => s.id === assignedShiftId);
-                                            return (
-                                                <td key={day} className="px-3 py-4 border text-center text-sm">
-                                                    {assignedShiftId === 'X' || !shiftInfo ? (
-                                                        <span className="text-gray-600 font-semibold">İzin</span>
-                                                    ) : (
-                                                        <div className={`${shiftColorClasses[shiftInfo.id]} p-1 rounded`}>
-                                                            <div className="font-bold">{shiftInfo.id}</div>
-                                                            <div className="text-xxs text-gray-500">{shiftInfo.time}</div>
-                                                        </div>
-                                                    )}
-                                                </td>
-                                            );
-                                        })}
-                                        <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-medium text-gray-900">
-                                            {totalShiftHours}:00
-                                        </td>
-                                    </tr>
-                                );
-                            })}
+                            { /* Her çalışan için; çalışan sayısı artık employeeCount parametresi ile dinamik oluşturulmuş schedule üzerinden hesaplanıyor. */}
+                            {Object.keys(schedule[weekIndex]).length > 0 &&
+                                // schedule[weekIndex] içinde tüm günlerin employee atamaları bulunduğundan,
+                                // çalışan isimlerini dinamik olarak schedule'dan almak için, örneğin, "Pzt" gününden alıyoruz.
+                                Object.keys(schedule[weekIndex]['Pzt']).map((empName) => {
+                                    // Toplam saat örneğinde sabit değer veriyoruz; dinamik hesaplama yapılabilir.
+                                    const totalShiftHours = 180;
+                                    return (
+                                        <tr key={empName} className="hover:bg-gray-50">
+                                            <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                                {empName}
+                                                <div className="text-xs text-gray-500">Çalışma günleri: {totalShiftHours / 9} gün (örnek)</div>
+                                            </td>
+                                            {days.map((day) => {
+                                                const assignedShiftId = schedule[weekIndex][day][empName];
+                                                const shiftInfo = shiftDetails.find(s => s.id === assignedShiftId);
+                                                return (
+                                                    <td key={day} className="px-3 py-4 border text-center text-sm">
+                                                        {assignedShiftId === 'X' || !shiftInfo ? (
+                                                            <span className="text-gray-600 font-semibold">İzin</span>
+                                                        ) : (
+                                                            <div className={`${shiftColorClasses[shiftInfo.id]} p-1 rounded`}>
+                                                                <div className="font-bold">{shiftInfo.id}</div>
+                                                                <div className="text-xxs text-gray-500">{shiftInfo.time}</div>
+                                                            </div>
+                                                        )}
+                                                    </td>
+                                                );
+                                            })}
+                                            <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-medium text-gray-900">
+                                                {totalShiftHours}:00
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
                             </tbody>
                         </table>
                     </div>

@@ -12,18 +12,20 @@ interface ShiftStatisticsProps {
 }
 
 const ShiftStatistics: React.FC<ShiftStatisticsProps> = ({ schedule, weeks }) => {
-    // Her çalışan için istatistikleri tutacak obje
+    // Her çalışan için istatistikleri tutan obje
     const employeeStats: Record<string, EmployeeStats> = {};
 
-    // Başlangıçta her çalışan için tüm shift'ler için 0 değeri atanır.
-    employees.forEach(emp => {
-        employeeStats[emp.name] = {};
+    // Tüm çalışan isimlerini schedule[0] günlerinden dinamik olarak elde edelim.
+    const employeeNames = Object.keys(schedule[0]['Pzt']);
+
+    employeeNames.forEach(name => {
+        employeeStats[name] = {};
         shiftDetails.forEach(shift => {
-            employeeStats[emp.name][shift.id] = 0;
+            employeeStats[name][shift.id] = 0;
         });
     });
 
-    // Tüm haftaların schedule'ını dolaşarak, her çalışan için shift sayısını toplayalım.
+    // Tüm haftaların schedule'ını gezerek, her çalışanın vardiya sayısını toplayalım.
     schedule.forEach(weekPlan => {
         Object.values(weekPlan).forEach(daySchedule => {
             Object.entries(daySchedule).forEach(([empName, shiftId]) => {
@@ -41,9 +43,7 @@ const ShiftStatistics: React.FC<ShiftStatisticsProps> = ({ schedule, weeks }) =>
                 <table className="min-w-full divide-y divide-gray-300">
                     <thead className="bg-gray-50">
                     <tr>
-                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">
-                            Çalışan
-                        </th>
+                        <th className="px-4 py-2 text-left text-sm font-semibold text-gray-900">Çalışan</th>
                         {shiftDetails.map(shift => (
                             <th
                                 key={shift.id}
@@ -52,18 +52,16 @@ const ShiftStatistics: React.FC<ShiftStatisticsProps> = ({ schedule, weeks }) =>
                                 {shift.id}
                             </th>
                         ))}
-                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-900">
-                            Toplam Gün
-                        </th>
+                        <th className="px-4 py-2 text-center text-sm font-semibold text-gray-900">Toplam Gün</th>
                     </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200">
-                    {employees.map(emp => {
-                        const stats = employeeStats[emp.name];
+                    {employeeNames.map(name => {
+                        const stats = employeeStats[name];
                         const totalDays = Object.values(stats).reduce((sum, val) => sum + val, 0);
                         return (
-                            <tr key={emp.name} className="hover:bg-gray-50">
-                                <td className="px-4 py-2 text-sm font-medium text-gray-900">{emp.name}</td>
+                            <tr key={name} className="hover:bg-gray-50">
+                                <td className="px-4 py-2 text-sm font-medium text-gray-900">{name}</td>
                                 {shiftDetails.map(shift => (
                                     <td key={shift.id} className="px-4 py-2 text-sm text-center text-gray-700">
                                         {stats[shift.id]}

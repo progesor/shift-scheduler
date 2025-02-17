@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import WeekSelector from './components/WeekSelector';
 import ShiftInfoCard from './components/ShiftInfoCard';
 import RequirementCard from './components/RequirementCard';
@@ -9,8 +9,10 @@ import { generateSchedule } from './utils/shiftScheduler';
 
 const App: React.FC = () => {
     const [weeks, setWeeks] = useState<number>(4);
-    // Seçilen hafta sayısına göre programı hesaplayalım
-    const schedule = generateSchedule(weeks);
+    const [employeeCount, setEmployeeCount] = useState<number>(28);
+
+    // useMemo ile schedule'ın yalnızca weeks veya employeeCount değiştiğinde yeniden hesaplanmasını sağlıyoruz.
+    const schedule = useMemo(() => generateSchedule(weeks, employeeCount), [weeks, employeeCount]);
 
     return (
         <div className="min-h-screen bg-gray-50">
@@ -20,19 +22,36 @@ const App: React.FC = () => {
                         <h1 className="text-2xl font-bold text-gray-900 mb-2">
                             Vardiya Çizelgesi
                         </h1>
-                        <p className="text-gray-600">23 çalışan için optimize edilmiş vardiya planı</p>
+                        <p className="text-gray-600">Optimized vardiya planı</p>
                     </header>
-                    <WeekSelector weeks={weeks} setWeeks={setWeeks} />
+                    <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+                        <WeekSelector weeks={weeks} setWeeks={setWeeks} />
+                        <div>
+                            <label
+                                htmlFor="employeeCount"
+                                className="block text-sm font-medium text-gray-700"
+                            >
+                                Çalışan Sayısı
+                            </label>
+                            <input
+                                type="number"
+                                id="employeeCount"
+                                value={employeeCount}
+                                onChange={(e) => setEmployeeCount(Number(e.target.value))}
+                                className="mt-1 block w-32 rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
+                                min={1}
+                            />
+                        </div>
+                    </div>
                     <ShiftInfoCard />
                     <RequirementCard />
-                    {/* Seçilen hafta sayısına göre istatistikleri her zaman gösteriyoruz */}
                     <ShiftStatistics schedule={schedule} weeks={weeks} />
-                    <ShiftTable weeks={weeks} />
+                    <ShiftTable weeks={weeks} employeeCount={employeeCount} />
                     <footer className="mt-6 text-sm text-gray-600">
                         <p>* Her çalışan haftada 5 gün çalışıp 2 gün izin kullanmaktadır.</p>
                         <p>* Her {weeks} haftada bir vardiya rotasyonu uygulanmaktadır.</p>
                         <p>* Rotasyon sayesinde izin günleri ve vardiyalar düzenli olarak değişmektedir.</p>
-                        <p>* Toplam 23 çalışan ile minimum personel gereksinimleri karşılanmaktadır.</p>
+                        <p>* Çalışan sayısı kullanıcı tarafından belirlenmektedir.</p>
                     </footer>
                 </div>
             </div>
