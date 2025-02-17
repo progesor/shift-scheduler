@@ -5,13 +5,13 @@ import ShiftInfoCard from './components/ShiftInfoCard';
 import RequirementCard from './components/RequirementCard';
 import ShiftTable from './components/ShiftTable';
 import ShiftStatistics from './components/ShiftStatistics';
+import Collapsible from './components/Collapsible';
 import { generateSchedule } from './utils/shiftScheduler';
 
 const App: React.FC = () => {
     const [weeks, setWeeks] = useState<number>(4);
     const [employeeCount, setEmployeeCount] = useState<number>(28);
 
-    // useMemo ile schedule'ın yalnızca weeks veya employeeCount değiştiğinde yeniden hesaplanmasını sağlıyoruz.
     const schedule = useMemo(() => generateSchedule(weeks, employeeCount), [weeks, employeeCount]);
 
     return (
@@ -43,10 +43,18 @@ const App: React.FC = () => {
                             />
                         </div>
                     </div>
-                    <ShiftInfoCard />
-                    <RequirementCard />
-                    <ShiftStatistics schedule={schedule} weeks={weeks} />
-                    <ShiftTable weeks={weeks} employeeCount={employeeCount} />
+                    <Collapsible title="Vardiya Bilgileri">
+                        <ShiftInfoCard />
+                    </Collapsible>
+                    <Collapsible title="Vardiya Gereksinimleri">
+                        <RequirementCard />
+                    </Collapsible>
+                    <Collapsible title={`${weeks} Haftalık Çalışma İstatistikleri`}>
+                        <ShiftStatistics schedule={schedule} weeks={weeks} />
+                    </Collapsible>
+                    <Collapsible title="Haftalık Vardiya Çizelgesi">
+                        <ShiftTable weeks={weeks} employeeCount={employeeCount} />
+                    </Collapsible>
                     <footer className="mt-6 text-sm text-gray-600">
                         <p>* Her çalışan haftada 5 gün çalışıp 2 gün izin kullanmaktadır.</p>
                         <p>* Her {weeks} haftada bir vardiya rotasyonu uygulanmaktadır.</p>
