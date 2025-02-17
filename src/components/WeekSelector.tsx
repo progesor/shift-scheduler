@@ -7,18 +7,18 @@ interface WeekSelectorProps {
 }
 
 const WeekSelector: React.FC<WeekSelectorProps> = ({ weeks, setWeeks }) => {
-    const options = [4, 8, 12, 16];
+    const options = [1,4, 8, 12, 16];
 
     return (
-        <div className="mb-8 flex items-center justify-center">
-            <label htmlFor="weekSelect" className="mr-3 text-lg font-medium text-gray-700">
-                Haftalık Plan:
+        <div className="mt-4">
+            <label htmlFor="weeks" className="block text-sm font-medium text-gray-700">
+                Gösterilecek Hafta Sayısı
             </label>
             <select
-                id="weekSelect"
+                id="weeks"
                 value={weeks}
                 onChange={(e) => setWeeks(Number(e.target.value))}
-                className="p-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm"
             >
                 {options.map((option) => (
                     <option key={option} value={option}>

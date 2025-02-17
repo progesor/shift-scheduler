@@ -1,62 +1,100 @@
-// src/components/ShiftTable.tsx
 import React from 'react';
 
 interface ShiftTableProps {
     weeks: number;
 }
 
-// Örnek çalışan verisi (28 çalışan)
-const employees = Array.from({ length: 28 }, (_, i) => `Çalışan ${i + 1}`);
+// 7 günlük gün isimleri (0: Pazartesi, 1: Salı, … 6: Pazar)
+const days = ['Pzt', 'Sal', 'Çar', 'Perş', 'Cum', 'Cmt', 'Paz'];
 
-// İzin grubu bilgileri (grup ve izin günleri)
-interface PermissionGroup {
-    group: string;
-    employees: string[];
-    // Haftanın günleri: Pazartesi, Salı, Çarşamba, Perşembe, Cuma, Cumartesi, Pazar
-    offDays: string[];
+// Vardiya detayları (6 vardiya + İzin)
+// Her vardiya için gereken kişi sayısı 3 (İzin için 0)
+interface Shift {
+    id: string;
+    name: string;
+    time: string;
+    required: number;
 }
 
-// Örnek: Grup A (Çalışan 1-4) izin: Pazartesi, Salı; Grup B (5-8): Salı, Çarşamba; vb.
-const permissionGroups: PermissionGroup[] = [
-    { group: 'A', employees: employees.slice(0, 4), offDays: ['Pzt', 'Sal'] },
-    { group: 'B', employees: employees.slice(4, 8), offDays: ['Sal', 'Çar'] },
-    { group: 'C', employees: employees.slice(8, 12), offDays: ['Çar', 'Perş'] },
-    { group: 'D', employees: employees.slice(12, 16), offDays: ['Perş', 'Cum'] },
-    { group: 'E', employees: employees.slice(16, 20), offDays: ['Cum', 'Cmt'] },
-    { group: 'F', employees: employees.slice(20, 24), offDays: ['Cmt', 'Paz'] },
-    { group: 'G', employees: employees.slice(24, 28), offDays: ['Paz', 'Pzt'] },
+const shiftDetails: Shift[] = [
+    { id: 'G', name: 'Gece', time: '00:00 - 09:00', required: 3 },
+    { id: 'S1', name: 'Sabah', time: '09:00 - 18:00', required: 3 },
+    { id: 'S2', name: 'Sabah2', time: '10:00 - 19:00', required: 3 },
+    { id: 'A1', name: 'Akşam1', time: '15:00 - 00:00', required: 3 },
+    { id: 'A2', name: 'Akşam2', time: '15:00 - 00:00', required: 3 },
+    { id: 'D', name: 'Davul', time: '19:00 - 04:00', required: 3 },
+    { id: 'X', name: 'İzin', time: '- - -', required: 0 },
 ];
 
-const days = ['Pzt', 'Sal', 'Çar', 'Perş', 'Cum', 'Cmt', 'Paz'];
-const shifts = ['Shift 1', 'Shift 2', 'Shift 3', 'Shift 4', 'Shift 5', 'Shift 6'];
+// Vardiya hücrelerinin arka plan renkleri (A2 için örnekte turuncu kullanıldı)
+const shiftColorClasses: Record<string, string> = {
+    G: 'bg-purple-200 hover:bg-purple-300',
+    S1: 'bg-blue-200 hover:bg-blue-300',
+    S2: 'bg-green-200 hover:bg-green-300',
+    A1: 'bg-yellow-200 hover:bg-yellow-300',
+    A2: 'bg-orange-200 hover:bg-orange-300', // A2 için güncellendi
+    D: 'bg-red-200 hover:bg-red-300',
+    X: 'bg-gray-200 hover:bg-gray-300',
+};
+
+// Çalışan verileri: Her çalışan için isim ve baseOff (0-6 arası, başlangıç izin ofseti)
+// Örneğimizde 28 çalışan üretiyoruz; baseOff değerini sırasıyla (i mod 7) atıyoruz.
+interface Employee {
+    name: string;
+    baseOff: number;
+}
+const employees: Employee[] = Array.from({ length: 28 }, (_, i) => ({
+    name: `Çalışan ${i + 1}`,
+    baseOff: i % 7, // her çalışan farklı baseOff
+}));
 
 /**
- * Bu fonksiyon, verilen hafta sayısı için tüm çalışanların haftalık vardiya planını hesaplar.
- * Her çalışanın günü için:
- *  - Eğer çalışanın izin günü ise "İzin" yazılır.
- *  - Aksi halde, o gün için atanmış shift (örneğin, grup içindeki sıraya göre) belirlenir.
+ * Her hafta için, her gün çalışanların atamasını hesaplayan fonksiyon.
+ * Her çalışan haftada 5 gün çalışıp 2 gün izin kullanacak şekilde rotasyonlu izin günleri belirlenir.
+ *
+ * Her hafta için, her çalışan için o haftaya özel izin günleri:
+ *   offDay1 = (baseOff + week - 1) mod 7
+ *   offDay2 = (baseOff + week) mod 7
+ *
+ * Eğer gün (0-6) bu offDay'lerden biriyse, çalışan için "İzin" (X) atanır.
+ * Aksi halde, o gün için çalışanlar (izinli olmayanlar) toplanır ve sırası,
+ * round-robin yöntemiyle (çalışanların çalışma sırasına göre) 6 vardiyadan atanır.
  */
 const generateSchedule = (weeks: number) => {
-    const schedule: any[] = [];
+    // available vardiyalar: "X" hariç, 6 vardiya
+    const availableShifts = shiftDetails.filter((shift) => shift.id !== 'X'); // 6 vardiya
+    const availableShiftsCount = availableShifts.length; // 6
 
-    // Her hafta için döngü
+    // schedule: week => day (isim) => mapping: employee name -> shift id (string)
+    const schedule: Array<Record<string, Record<string, string>>> = [];
+
     for (let week = 1; week <= weeks; week++) {
-        const weekPlan: { [day: string]: { [employee: string]: string } } = {};
-        days.forEach((day) => {
-            weekPlan[day] = {};
-            // Her grup için
-            permissionGroups.forEach((group) => {
-                group.employees.forEach((employee, index) => {
-                    // Eğer bu gün çalışanın izin günü ise:
-                    if (group.offDays.includes(day)) {
-                        weekPlan[day][employee] = 'İzin';
-                    } else {
-                        // Her hafta, grup içi sıralamaya göre vardiya ataması, basit rotasyon:
-                        const shiftIndex = (index + week - 1) % shifts.length;
-                        weekPlan[day][employee] = shifts[shiftIndex];
-                    }
-                });
+        const weekPlan: Record<string, Record<string, string>> = {};
+
+        days.forEach((day, dayIndex) => {
+            // İlk olarak, belirli bir gün için her çalışan için "İzin" veya çalışma durumunu belirleyeceğiz.
+            // Çalışanların çalışma günlerini ayrı bir diziye toplayalım.
+            const daySchedule: Record<string, string> = {};
+            const workingEmployees: Employee[] = [];
+
+            employees.forEach((emp) => {
+                // Her çalışan için o haftanın izin günlerini hesaplayalım:
+                const offDay1 = (emp.baseOff + week - 1) % 7;
+                const offDay2 = (emp.baseOff + week) % 7;
+                if (dayIndex === offDay1 || dayIndex === offDay2) {
+                    daySchedule[emp.name] = 'X'; // İzin
+                } else {
+                    workingEmployees.push(emp);
+                }
             });
+
+            // Çalışanlar çalışma günündeyse, round-robin yöntemiyle 6 vardiyaya eşit dağıtım yapalım.
+            workingEmployees.forEach((emp, idx) => {
+                const shift = availableShifts[idx % availableShiftsCount];
+                daySchedule[emp.name] = shift.id;
+            });
+
+            weekPlan[day] = daySchedule;
         });
         schedule.push(weekPlan);
     }
@@ -67,36 +105,69 @@ const ShiftTable: React.FC<ShiftTableProps> = ({ weeks }) => {
     const schedule = generateSchedule(weeks);
 
     return (
-        <div className="space-y-10">
+        <div className="overflow-x-auto -mx-4 sm:-mx-6 lg:-mx-8">
             {schedule.map((weekPlan, weekIndex) => (
-                <div key={weekIndex} className="bg-white rounded-lg shadow p-6">
-                    <h2 className="text-2xl font-semibold text-blue-600 mb-4">
+                <div
+                    key={weekIndex}
+                    className="mb-6 bg-white rounded-lg shadow p-4 border border-gray-200"
+                >
+                    <h2 className="text-xl font-semibold text-gray-900 mb-3">
                         Hafta {weekIndex + 1}
                     </h2>
-                    <div className="overflow-x-auto">
-                        <table className="min-w-full border border-gray-200">
-                            <thead>
-                            <tr className="bg-gray-100">
-                                <th className="px-4 py-2 border text-gray-700 font-semibold">Çalışan</th>
-                                {days.map((day) => (
-                                    <th key={day} className="px-4 py-2 border text-gray-700 font-semibold">{day}</th>
-                                ))}
-                            </tr>
-                            </thead>
-                            <tbody>
-                            {employees.map((employee) => (
-                                <tr key={employee} className="odd:bg-white even:bg-gray-50">
-                                    <td className="px-4 py-2 border font-medium">{employee}</td>
-                                    {days.map((day) => (
-                                        <td key={day} className="px-4 py-2 border text-center">
-                                            {weekPlan[day][employee]}
-                                        </td>
-                                    ))}
-                                </tr>
+                    <table className="min-w-full divide-y divide-gray-300">
+                        <thead className="bg-gray-50">
+                        <tr>
+                            <th className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6 lg:pl-8">
+                                Çalışan
+                            </th>
+                            {days.map((day) => (
+                                <th
+                                    key={day}
+                                    className="px-3 py-2 text-center text-sm font-semibold text-gray-900"
+                                >
+                                    <div className="whitespace-nowrap">Hafta {weekIndex + 1}</div>
+                                    <div className="text-xs text-gray-500">{day}</div>
+                                </th>
                             ))}
-                            </tbody>
-                        </table>
-                    </div>
+                            <th className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900">
+                                Toplam Saat
+                            </th>
+                        </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-200 bg-white">
+                        {employees.map((emp) => {
+                            const totalShiftHours = 180; // Örneğimizde sabit değer (dinamik hesaplama yapılabilir)
+                            return (
+                                <tr key={emp.name} className="hover:bg-gray-50">
+                                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6 lg:pl-8">
+                                        {emp.name}
+                                        <div className="text-xs text-gray-500">20 gün çalışma</div>
+                                    </td>
+                                    {days.map((day, dayIndex) => {
+                                        const shiftId = schedule[weekIndex][day][emp.name];
+                                        // shiftId "X" ise izin, aksi halde ilgili vardiya bilgilerini gösterelim.
+                                        const shiftInfo = shiftDetails.find((s) => s.id === shiftId);
+                                        return (
+                                            <td key={day} className="px-3 py-4 border text-center text-sm">
+                                                {shiftId === 'X' || !shiftInfo ? (
+                                                    <span className="text-gray-600 font-semibold">İzin</span>
+                                                ) : (
+                                                    <div className={`${shiftColorClasses[shiftInfo.id]} p-1 rounded`}>
+                                                        <div className="font-bold">{shiftInfo.id}</div>
+                                                        <div className="text-xxs text-gray-500">{shiftInfo.time}</div>
+                                                    </div>
+                                                )}
+                                            </td>
+                                        );
+                                    })}
+                                    <td className="whitespace-nowrap px-3 py-4 text-sm text-center font-medium text-gray-900">
+                                        {totalShiftHours}:00
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                        </tbody>
+                    </table>
                 </div>
             ))}
         </div>
